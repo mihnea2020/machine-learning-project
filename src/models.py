@@ -16,7 +16,7 @@ class decisionTree:
     - min_samples_split: Minimum number of samples required to split a node
     - max_depth: Maximum depth of the tree (prevents overfitting)
     """
-    def __init__(self, min_samples_leaf=100, min_samples_split=20, max_depth=5):
+    def __init__(self, min_samples_leaf=10, min_samples_split=200, max_depth=10):
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
