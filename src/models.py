@@ -15,11 +15,13 @@ class decisionTree:
     - min_samples_leaf: Minimum number of samples required in a leaf node
     - min_samples_split: Minimum number of samples required to split a node
     - max_depth: Maximum depth of the tree (prevents overfitting)
+    - max_features: Number of features to consider when looking for the best split
     """
-    def __init__(self, min_samples_leaf=10, min_samples_split=200, max_depth=10):
+    def __init__(self, min_samples_leaf=10, min_samples_split=200, max_depth=10, max_features=None):
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
+        self.max_features = max_features
         self.tree = None  # Will store the tree structure after fitting
     
     def fit(self, X, y):
@@ -105,8 +107,13 @@ class decisionTree:
             node['is_leaf'] = True
             return node
 
+        if self.max_features is not None and self.max_features < n_features:
+            features = np.random.choice(n_features, self.max_features, replace=False)
+        else:
+            features = range(n_features)
+
         # Try splitting on each feature
-        for feat_idx in range(n_features):
+        for feat_idx in features:
             values = X[:, feat_idx]
             unique_vals = np.unique(values)
             
@@ -218,6 +225,65 @@ def rmse(y_true, y_pred):
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
     return np.sqrt(((y_true - y_pred) ** 2).mean())
+
+
+class RandomForestRegressor:
+    """
+    A Random Forest Regressor implemented from scratch.
+    
+    It builds multiple decision trees on bootstrap samples of the training data
+    and averages their predictions. Each tree considers a random subset of 
+    features at each split (if max_features is set).
+    """
+    def __init__(self, n_estimators=100, max_depth=10, min_samples_leaf=10, min_samples_split=200, max_features='sqrt', random_state=None):
+        self.n_estimators = n_estimators
+        self.max_depth = max_depth
+        self.min_samples_leaf = min_samples_leaf
+        self.min_samples_split = min_samples_split
+        self.max_features = max_features
+        self.random_state = random_state
+        self.trees = []
+        
+    def fit(self, X, y):
+        X = np.asarray(X)
+        y = np.asarray(y)
+        n_samples, n_features = X.shape
+        
+        # Determine number of features to consider
+        if self.max_features == 'sqrt':
+            self.n_features_split = int(np.sqrt(n_features))
+        elif self.max_features == 'log2':
+            self.n_features_split = int(np.log2(n_features))
+        elif isinstance(self.max_features, int):
+            self.n_features_split = self.max_features
+        else:
+            self.n_features_split = n_features
+            
+        rng = np.random.RandomState(self.random_state)
+        self.trees = []
+        
+        for _ in range(self.n_estimators):
+            # Bootstrap sampling
+            indices = rng.choice(n_samples, n_samples, replace=True)
+            X_sample = X[indices]
+            y_sample = y[indices]
+            
+            tree = decisionTree(
+                max_depth=self.max_depth,
+                min_samples_leaf=self.min_samples_leaf,
+                min_samples_split=self.min_samples_split,
+                max_features=self.n_features_split
+            )
+            tree.fit(X_sample, y_sample)
+            self.trees.append(tree)
+            
+    def predict(self, X):
+        X = np.asarray(X)
+        # Collect predictions from all trees
+        tree_preds = np.array([tree.predict(X) for tree in self.trees])
+        # Return average prediction
+        return np.mean(tree_preds, axis=0)
+
 
 
 
